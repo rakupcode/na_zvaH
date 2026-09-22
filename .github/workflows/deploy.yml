@@ -1,0 +1,60 @@
+name: Deploy Spring Boot to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Triggers the deployment whenever you push to the main branch
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: springboot-api
+  REPOSITORY: springboot-repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for authentication via Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Authenticate with GCP using Workload Identity Federation (Configured in Step 3)
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # Log in to the GCP Artifact Registry to store your Docker images
+      - name: Log in to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      # Build the container using your Dockerfile and push it to GCP
+      - name: Build and Push Container
+        run: |
+          IMAGE_TAG=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # Deploy the built container straight to Cloud Run
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE_TAG }}
+          flags: |
+            --allow-unauthenticated
+            --set-cloudsql-instances=${{ secrets.GCP_DB_CONNECTION_NAME }}
+            --set-env-vars=DB_CONNECTION_NAME=${{ secrets.GCP_DB_CONNECTION_NAME }},DB_NAME=${{ secrets.GCP_DB_NAME }},DB_USER=${{ secrets.GCP_DB_USER }},DB_PASSWORD=${{ secrets.GCP_DB_PASSWORD }}
