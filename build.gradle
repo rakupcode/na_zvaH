@@ -41,7 +41,14 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
-	implementation 'com.google.cloud:spring-cloud-gcp-starter-sql-postgresql'
+
+	implementation 'com.google.cloud:spring-cloud-gcp-starter-sql-postgresql:5.5.0'
+
+	// Explicitly update the underlying socket factory version to guarantee Java 25 compatibility
+	implementation 'com.google.cloud.sql:postgres-socket-factory:1.15.1'
+
+	// Standard PostgreSQL Driver
+	runtimeOnly 'org.postgresql:postgresql:42.7.2'
 }
 
 tasks.named('test') {
