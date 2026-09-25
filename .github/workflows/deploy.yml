@@ -57,4 +57,4 @@ jobs:
           flags: |
             --allow-unauthenticated
             --set-cloudsql-instances=${{ secrets.GCP_DB_CONNECTION_NAME }}
-            --set-env-vars=DB_CONNECTION_NAME=${{ secrets.GCP_DB_CONNECTION_NAME }},DB_NAME=${{ secrets.GCP_DB_NAME }},DB_USER=${{ secrets.GCP_DB_USER }},DB_PASSWORD=${{ secrets.GCP_DB_PASSWORD }}
+            --set-env-vars="spring.cloud.gcp.sql.instance-connection-name=${{ secrets.GCP_DB_CONNECTION_NAME }},DB_NAME=${{ secrets.GCP_DB_NAME }},DB_USER=${{ secrets.GCP_DB_USER }},DB_PASSWORD=${{ secrets.GCP_DB_PASSWORD }}"
